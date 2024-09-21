@@ -20,11 +20,8 @@ hello_world.k
 output "Hello, World!"
 ```
 
-> [!INFO]
+> [!NOTE]
 > The `~` character starts and ends multiline comments.
-
-> [!INFO]
-> The `output` keyword is synonymous with `return` in other languages.
 
 Run your `.k` file from your terminal.
 
@@ -44,7 +41,7 @@ output "foo"
 
 This program "outputs" the string `"foo"` to the console.
 
-> [!INFO]
+> [!NOTE]
 > The `output` keyword is synonymous with `return` in other languages.
 
 Knife programs always produce string outputs.
@@ -73,7 +70,7 @@ will output:
 bar
 ```
 
-> [!WARNING]
+> [!IMPORTANT]
 > You can only pass one argument to a Knife program.
 
 Knife programs will accept any _non-null_ JSON-serializable value as input; the `input` keyword will automatically JSON decode the input value.
@@ -166,10 +163,10 @@ set foo to "bar"
 
 In this example, `foo` is the name of the key and `"bar"` is the value.
 
-> [!INFO]
+> [!IMPORTANT]
 > Keys are always strings.
 
-> [!INFO]
+> [!NOTE]
 > Any non-null JSON-serializable value can be assigned to a key.
 
 You can access the value of a key by its name.
@@ -258,7 +255,7 @@ set foobar to "foobar"
 set first_char to foobar[0]
 ```
 
-> [!INFO]
+> [!NOTE]
 > String indices are zero-based.
 
 You can get the length of a string with the `number of characters in` operator.
@@ -322,7 +319,7 @@ set items to ["foo", "bar"]
 set first_item to items[0]
 ```
 
-> [!INFO]
+> [!NOTE]
 > Array indices are zero-based.
 
 You can get the length of an array with the `number of items in` operator.
@@ -433,7 +430,7 @@ use increment
 > [!NOTE]
 > If we run `main.k`, it will output `2`.
 
-> [!INFO]
+> [!NOTE]
 > Only code in the `use` block has access to the imported function.
 
 You can import multiple functions by separating them with commas.
@@ -460,7 +457,8 @@ use input as callback
 	output callback 1
 ```
 
-> [!WARNING] Calling `use input` without aliasing it will overwrite the `input` keyword.
+> [!CAUTION]
+> Calling `use input` without aliasing it will overwrite the `input` keyword.
 
 This program will import the function whose name is passed as an argument.
 
