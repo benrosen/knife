@@ -1,0 +1,23 @@
+{
+  "name": "knife",
+  "version": "1.0.0",
+  "description": "Knife is a practical programming language.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benrosen/knife.git"
+  },
+  "private": true,
+  "devDependencies": {
+    "@types/jest": "^29.5.13",
+    "jest": "^29.7.0",
+    "jest-mock-extended": "^4.0.0-beta1",
+    "prettier": "^3.3.3",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  }
+}
