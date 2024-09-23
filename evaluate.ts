@@ -1,11 +1,14 @@
 export const evaluate = async (knife: string): Promise<string> => {
-  const outputCommand = "output";
-  const outputCommandPlusSpace = outputCommand + " ";
+  const tokens = knife.split(" ");
 
-  if (knife.startsWith(outputCommandPlusSpace)) {
-    const restOfKnife = knife.slice(outputCommandPlusSpace.length);
+  const isOutputCommand = tokens[0] === "output";
 
-    return await evaluate(restOfKnife);
+  if (isOutputCommand) {
+    const remainingTokens = tokens.slice(1);
+
+    const remainingKnife = remainingTokens.join(" ");
+
+    return await evaluate(remainingKnife);
   }
 
   return knife;
