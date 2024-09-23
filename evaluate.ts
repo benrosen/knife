@@ -1,6 +1,12 @@
 export const evaluate = async (knife: string): Promise<string> => {
-  return "";
+  const outputCommand = "output";
+  const outputCommandPlusSpace = outputCommand + " ";
+
+  if (knife.startsWith(outputCommandPlusSpace)) {
+    const restOfKnife = knife.slice(outputCommandPlusSpace.length);
+
+    return await evaluate(restOfKnife);
+  }
+
+  return knife;
 };
-
-
-// if is output call output function with arg from knife
