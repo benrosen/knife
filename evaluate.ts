@@ -18,6 +18,10 @@ export const evaluate = async (
     return evaluateInputKeyword(context);
   }
 
+  if (isObjectPropertyAccess(value)) {
+    return await evaluateObjectPropertyAccess(value, context);
+  }
+
   return "";
 };
 
@@ -59,4 +63,30 @@ const isInputKeyword = (value: string): boolean => {
 
 const evaluateInputKeyword = (context: { input: string }): string => {
   return context.input;
+};
+
+const isObjectPropertyAccess = (value: string): boolean => {
+  const objectPropertyAccessRegularExpression = /^.*\..*$/;
+  return objectPropertyAccessRegularExpression.test(value);
+};
+
+const evaluateObjectPropertyAccess = async (
+  value: string,
+  context: { input: string },
+): Promise<string> => {
+  try {
+    const objectName = value.split(".")[0];
+
+    const propertyName = value.split(".")[1];
+
+    const objectValue = await evaluate(objectName, context);
+
+    const parsedObjectValue = JSON.parse(objectValue);
+
+    const propertyValue = parsedObjectValue[propertyName];
+
+    return await evaluate(JSON.stringify(propertyValue), context);
+  } catch (error) {
+    return "";
+  }
 };
