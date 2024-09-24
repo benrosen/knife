@@ -22,6 +22,10 @@ export const evaluate = async (
     return await evaluateObjectPropertyAccess(value, context);
   }
 
+  if (isArrayIndexAccess(value)) {
+    return await evaluateArrayIndexAccess(value, context);
+  }
+
   return "";
 };
 
@@ -75,17 +79,55 @@ const evaluateObjectPropertyAccess = async (
   context: { input: string },
 ): Promise<string> => {
   try {
-    const objectName = value.split(".")[0];
+    const pathSegments = value.split(".");
 
-    const propertyName = value.split(".")[1];
+    const objectSegment: string = pathSegments[0];
 
-    const objectValue = await evaluate(objectName, context);
+    const propertyPathSegments = pathSegments.slice(1);
 
-    const parsedObjectValue = JSON.parse(objectValue);
+    const objectValue = await evaluate(objectSegment, context);
 
-    const propertyValue = parsedObjectValue[propertyName];
+    let propertyValue = JSON.parse(objectValue);
+
+    for (const pathSegment of propertyPathSegments) {
+      propertyValue = propertyValue[pathSegment];
+    }
 
     return await evaluate(JSON.stringify(propertyValue), context);
+  } catch (error) {
+    return "";
+  }
+};
+
+const isArrayIndexAccess = (value: string): boolean => {
+  const arrayIndexAccessRegularExpression = /^.+\[\d+]$/;
+  return arrayIndexAccessRegularExpression.test(value);
+};
+
+const evaluateArrayIndexAccess = async (
+  value: string,
+  context: { input: string },
+): Promise<string> => {
+  // TODO this approach wont handle nested or sequential array access
+  try {
+    const arrayName = value.split("[")[0];
+
+    const openingBracketCharacterIndex = value.indexOf("[");
+
+    const closingBracketCharacterIndex = value.indexOf("]");
+
+    const textBetweenBrackets = value.slice(
+      openingBracketCharacterIndex + 1,
+      closingBracketCharacterIndex,
+    );
+
+    const index = await evaluate(textBetweenBrackets, context);
+
+    const arrayValue = await evaluate(arrayName, context);
+
+    const array = JSON.parse(arrayValue);
+
+    return await evaluate(JSON.stringify(array[index]), context);
   } catch (error) {
     return "";
   }
