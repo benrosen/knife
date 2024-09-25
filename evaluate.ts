@@ -95,7 +95,7 @@ const evaluateObjectPropertyAccess = async (
 
     return await evaluate(JSON.stringify(propertyValue), context);
   } catch (error) {
-    return "";
+    return `Error: Unable to evaluate object property access: ${value}`;
   }
 };
 
@@ -108,27 +108,67 @@ const evaluateArrayIndexAccess = async (
   value: string,
   context: { input: string },
 ): Promise<string> => {
-  // TODO this approach wont handle nested or sequential array access
   try {
-    const arrayName = value.split("[")[0];
+    // foo[x]
+    // foo[x[x]]
+    // foo[x][x][x]
+    // foo[x][foo[x][x]]
+    // foo[foo[x][x]][x]
 
-    const openingBracketCharacterIndex = value.indexOf("[");
+    const lastClosingBracketIndex = value.lastIndexOf("]");
 
-    const closingBracketCharacterIndex = value.indexOf("]");
+    let openingBracketIndex;
 
-    const textBetweenBrackets = value.slice(
-      openingBracketCharacterIndex + 1,
-      closingBracketCharacterIndex,
+    const bracketStack = [];
+
+    for (let i = lastClosingBracketIndex; i >= 0; i--) {
+      const currentCharacter = value[i];
+
+      if (currentCharacter === "]") {
+        bracketStack.push(currentCharacter);
+      }
+
+      if (currentCharacter === "[") {
+        bracketStack.pop();
+
+        if (bracketStack.length === 0) {
+          openingBracketIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (openingBracketIndex === undefined) {
+      return "";
+    }
+
+    console.log("value", value);
+
+    const arraySegment = value.slice(0, openingBracketIndex);
+
+    console.log("arraySegment", arraySegment);
+
+    const indexSegment = value.slice(
+      openingBracketIndex + 1,
+      lastClosingBracketIndex,
     );
 
-    const index = await evaluate(textBetweenBrackets, context);
+    console.log("indexSegment", indexSegment);
 
-    const arrayValue = await evaluate(arrayName, context);
+    const arrayValue = await evaluate(arraySegment, context);
+
+    const indexValue = await evaluate(indexSegment, context);
+
+    console.log("arrayValue", arrayValue);
+
+    console.log("indexValue", indexValue);
 
     const array = JSON.parse(arrayValue);
 
+    const index = JSON.parse(indexValue);
+
     return await evaluate(JSON.stringify(array[index]), context);
   } catch (error) {
-    return "";
+    return `Error: Unable to evaluate array index access: ${value}: ${error}`;
   }
 };
