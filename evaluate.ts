@@ -18,8 +18,16 @@ export const evaluate = async (
     return evaluateInputKeyword(context);
   }
 
+  if (isObjectLiteral(value)) {
+    return await evaluateObjectLiteral(value, context);
+  }
+
   if (isObjectPropertyAccess(value)) {
     return await evaluateObjectPropertyAccess(value, context);
+  }
+
+  if (isArrayLiteral(value)) {
+    return await evaluateArrayLiteral(value, context);
   }
 
   if (isArrayIndexAccess(value)) {
@@ -61,6 +69,32 @@ const evaluateNumberLiteral = (value: string): number => {
   return JSON.parse(value);
 };
 
+const isArrayLiteral = (value: string): boolean => {
+  const arrayLiteralRegularExpression = /^\[.*\]$/;
+  return arrayLiteralRegularExpression.test(value);
+};
+
+const evaluateArrayLiteral = async (
+  value: string,
+  context: { input: string },
+): Promise<string> => {
+  // TODO i probably need to evaluate the items in this instead; what if "input" is an item e.g. "[input]"?
+  return value;
+};
+
+const isObjectLiteral = (value: string): boolean => {
+  const objectLiteralRegularExpression = /^\{.*\}$/;
+  return objectLiteralRegularExpression.test(value);
+};
+
+const evaluateObjectLiteral = async (
+  value: string,
+  context: { input: string },
+): Promise<string> => {
+  // TODO i probably need to evaluate this recursively; what if "input" is a value e.g. "{ foo: input }"?
+  return value;
+};
+
 const isInputKeyword = (value: string): boolean => {
   return value === "input";
 };
@@ -95,12 +129,13 @@ const evaluateObjectPropertyAccess = async (
 
     return await evaluate(JSON.stringify(propertyValue), context);
   } catch (error) {
-    return `Error: Unable to evaluate object property access: ${value}`;
+    return "";
   }
 };
 
 const isArrayIndexAccess = (value: string): boolean => {
-  const arrayIndexAccessRegularExpression = /^.+\[\d+]$/;
+  // TODO this is probably wrong; i think it will count [[0]] as an array index access even though it's not (it's an array literal)
+  const arrayIndexAccessRegularExpression = /^.+\[.*\]$/;
   return arrayIndexAccessRegularExpression.test(value);
 };
 
@@ -109,12 +144,6 @@ const evaluateArrayIndexAccess = async (
   context: { input: string },
 ): Promise<string> => {
   try {
-    // foo[x]
-    // foo[x[x]]
-    // foo[x][x][x]
-    // foo[x][foo[x][x]]
-    // foo[foo[x][x]][x]
-
     const lastClosingBracketIndex = value.lastIndexOf("]");
 
     let openingBracketIndex;
@@ -142,33 +171,27 @@ const evaluateArrayIndexAccess = async (
       return "";
     }
 
-    console.log("value", value);
-
     const arraySegment = value.slice(0, openingBracketIndex);
-
-    console.log("arraySegment", arraySegment);
 
     const indexSegment = value.slice(
       openingBracketIndex + 1,
       lastClosingBracketIndex,
     );
 
-    console.log("indexSegment", indexSegment);
-
     const arrayValue = await evaluate(arraySegment, context);
 
     const indexValue = await evaluate(indexSegment, context);
-
-    console.log("arrayValue", arrayValue);
-
-    console.log("indexValue", indexValue);
 
     const array = JSON.parse(arrayValue);
 
     const index = JSON.parse(indexValue);
 
-    return await evaluate(JSON.stringify(array[index]), context);
+    const result = array[index];
+
+    const evaluatedResult = await evaluate(JSON.stringify(result), context);
+
+    return evaluatedResult;
   } catch (error) {
-    return `Error: Unable to evaluate array index access: ${value}: ${error}`;
+    return "";
   }
 };
