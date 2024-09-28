@@ -35,6 +35,48 @@ describe("evaluate", () => {
       "baz",
       { input: JSON.stringify([0, [2], ["foo", "bar", "baz"]]) },
     ],
+    ["output input[0].foo", "bar", { input: JSON.stringify([{ foo: "bar" }]) }],
+    [
+      "output input[0].foo[0]",
+      "b",
+      { input: JSON.stringify([{ foo: ["b"] }]) },
+    ],
+    [`set foo to "bar"`, ""],
+    [
+      `set foo to "bar"
+    output foo`,
+      "bar",
+    ],
+    [
+      `set foo to "bar"
+    output baz`,
+      "",
+    ],
+    [
+      `set baz to ["foo", "bar"]
+    output baz[0]`,
+      "foo",
+    ],
+    [
+      `set qux to { foo: "bar" }
+    output qux.foo`,
+      "bar",
+    ],
+    [
+      `set foo to {
+      bar: "baz"
+    }
+    output foo.bar`,
+      "baz",
+    ],
+    [
+      `set foo to {
+      bar: "baz"
+    }
+
+    output foo.bar`,
+      "baz",
+    ],
   ])(
     "'%s' should return '%s'",
     async (

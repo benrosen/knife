@@ -104,7 +104,7 @@ const evaluateInputKeyword = (context: { input: string }): string => {
 };
 
 const isObjectPropertyAccess = (value: string): boolean => {
-  const objectPropertyAccessRegularExpression = /^.*\..*$/;
+  const objectPropertyAccessRegularExpression = /^.*\.[^\[\]]+$/;
   return objectPropertyAccessRegularExpression.test(value);
 };
 
