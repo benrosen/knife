@@ -1,6 +1,8 @@
+type Context = { input: string; state: { [key: string]: string } };
+
 export const evaluate = async (
   value: string,
-  context: { input: string },
+  context: Context,
 ): Promise<string> => {
   if (isOutputCommand(value)) {
     return evaluateOutputCommand(value, context);
@@ -34,6 +36,11 @@ export const evaluate = async (
     return await evaluateArrayIndexAccess(value, context);
   }
 
+  if (isSetToCommand(value)) {
+    const newContext = await evaluateSetToCommand(value, context);
+    return "";
+  }
+
   return "";
 };
 
@@ -44,7 +51,7 @@ const isOutputCommand = (command: string): boolean => {
 
 const evaluateOutputCommand = async (
   command: string,
-  context: { input: string },
+  context: Context,
 ): Promise<string> => {
   const outputCommandPrefix = "output ";
   const restOfCommand = command.slice(outputCommandPrefix.length);
@@ -76,7 +83,7 @@ const isArrayLiteral = (value: string): boolean => {
 
 const evaluateArrayLiteral = async (
   value: string,
-  context: { input: string },
+  context: Context,
 ): Promise<string> => {
   // TODO i probably need to evaluate the items in this instead; what if "input" is an item e.g. "[input]"?
   return value;
@@ -89,7 +96,7 @@ const isObjectLiteral = (value: string): boolean => {
 
 const evaluateObjectLiteral = async (
   value: string,
-  context: { input: string },
+  context: Context,
 ): Promise<string> => {
   // TODO i probably need to evaluate this recursively; what if "input" is a value e.g. "{ foo: input }"?
   return value;
@@ -99,7 +106,7 @@ const isInputKeyword = (value: string): boolean => {
   return value === "input";
 };
 
-const evaluateInputKeyword = (context: { input: string }): string => {
+const evaluateInputKeyword = (context: Context): string => {
   return context.input;
 };
 
@@ -110,7 +117,7 @@ const isObjectPropertyAccess = (value: string): boolean => {
 
 const evaluateObjectPropertyAccess = async (
   value: string,
-  context: { input: string },
+  context: Context,
 ): Promise<string> => {
   try {
     const pathSegments = value.split(".");
@@ -141,7 +148,7 @@ const isArrayIndexAccess = (value: string): boolean => {
 
 const evaluateArrayIndexAccess = async (
   value: string,
-  context: { input: string },
+  context: Context,
 ): Promise<string> => {
   try {
     const lastClosingBracketIndex = value.lastIndexOf("]");
@@ -194,4 +201,33 @@ const evaluateArrayIndexAccess = async (
   } catch (error) {
     return "";
   }
+};
+
+const isSetToCommand = (command: string): boolean => {
+  const setToCommandRegularExpression = /^set\s+(\w+)\s+to\s+([\s\S]+)$/;
+  return setToCommandRegularExpression.test(command);
+};
+
+const evaluateSetToCommand = async (
+  command: string,
+  context: Context,
+): Promise<Context> => {
+  const setToCommandRegularExpression = /^set\s+(\w+)\s+to\s+([\s\S]+)$/;
+  const matches = command.match(setToCommandRegularExpression);
+
+  if (matches === null) {
+    return context;
+  }
+
+  const [, key, value] = matches;
+
+  const evaluatedValue = await evaluate(value, context);
+
+  return {
+    ...context,
+    state: {
+      ...context.state,
+      [key]: evaluatedValue,
+    },
+  };
 };
