@@ -1,23 +1,32 @@
-type Context = { input: string; state: { [key: string]: string } };
+import { Context, Evaluation } from "./types";
 
 export const evaluate = async (
   value: string,
   context: Context,
-): Promise<string> => {
+): Promise<Evaluation> => {
   if (isOutputCommand(value)) {
     return evaluateOutputCommand(value, context);
   }
 
   if (isStringLiteral(value)) {
-    return evaluateStringLiteral(value);
+    return {
+      value: evaluateStringLiteral(value),
+      context,
+    };
   }
 
   if (isNumberLiteral(value)) {
-    return evaluateNumberLiteral(value).toString();
+    return {
+      value: evaluateNumberLiteral(value),
+      context,
+    };
   }
 
   if (isInputKeyword(value)) {
-    return evaluateInputKeyword(context);
+    return {
+      value: evaluateInputKeyword(context),
+      context,
+    };
   }
 
   if (isObjectLiteral(value)) {
@@ -38,10 +47,20 @@ export const evaluate = async (
 
   if (isSetToCommand(value)) {
     const newContext = await evaluateSetToCommand(value, context);
-    return "";
+    return {
+      value: "",
+      context: newContext,
+    };
   }
 
-  return "";
+  if (isGetCommand(value, context)) {
+    return await evaluateGetCommand(value, context);
+  }
+
+  return {
+    value: "",
+    context,
+  };
 };
 
 const isOutputCommand = (command: string): boolean => {
@@ -52,7 +71,7 @@ const isOutputCommand = (command: string): boolean => {
 const evaluateOutputCommand = async (
   command: string,
   context: Context,
-): Promise<string> => {
+): Promise<Evaluation> => {
   const outputCommandPrefix = "output ";
   const restOfCommand = command.slice(outputCommandPrefix.length);
   return await evaluate(restOfCommand, context);
@@ -72,34 +91,252 @@ const isNumberLiteral = (value: string): boolean => {
   return numberLiteralRegularExpression.test(value);
 };
 
-const evaluateNumberLiteral = (value: string): number => {
-  return JSON.parse(value);
+const evaluateNumberLiteral = (value: string): string => {
+  return value;
 };
 
 const isArrayLiteral = (value: string): boolean => {
-  const arrayLiteralRegularExpression = /^\[.*\]$/;
+  const arrayLiteralRegularExpression = /^\[.*\]$/s;
   return arrayLiteralRegularExpression.test(value);
 };
 
 const evaluateArrayLiteral = async (
   value: string,
   context: Context,
-): Promise<string> => {
-  // TODO i probably need to evaluate the items in this instead; what if "input" is an item e.g. "[input]"?
-  return value;
+): Promise<Evaluation> => {
+  const arrayAsString: string = value;
+
+  const arrayAsStringWithOuterBracketsRemoved = arrayAsString.slice(1, -1);
+
+  const characterBuffer: string[] = [];
+
+  const clearCharacterBuffer = () => {
+    characterBuffer.length = 0;
+  };
+
+  const arrayItemsAsStrings: string[] = [];
+
+  const writeCharacterBufferToItems = () => {
+    const item = characterBuffer.join("").trim();
+    arrayItemsAsStrings.push(item);
+    clearCharacterBuffer();
+  };
+
+  const stringDelimiterInstanceIndices: number[] = [];
+
+  const arrayDelimiterInstanceIndices: number[] = [];
+
+  const objectDelimiterInstanceIndices: number[] = [];
+
+  const isContainedInString = () => {
+    return stringDelimiterInstanceIndices.length % 2 === 1;
+  };
+
+  const isContainedInArray = () => {
+    return arrayDelimiterInstanceIndices.length > 0;
+  };
+
+  const isContainedInObject = () => {
+    return objectDelimiterInstanceIndices.length > 0;
+  };
+
+  for (let i = 0; i < arrayAsStringWithOuterBracketsRemoved.length; i++) {
+    const currentCharacter = arrayAsStringWithOuterBracketsRemoved[i];
+
+    // TODO escaped quotes /" ?
+    if (currentCharacter === '"') {
+      stringDelimiterInstanceIndices.push(i);
+    }
+
+    if (currentCharacter === "[") {
+      arrayDelimiterInstanceIndices.push(i);
+    }
+
+    if (currentCharacter === "]") {
+      arrayDelimiterInstanceIndices.pop();
+    }
+
+    if (currentCharacter === "{") {
+      objectDelimiterInstanceIndices.push(i);
+    }
+
+    if (currentCharacter === "}") {
+      objectDelimiterInstanceIndices.pop();
+    }
+
+    if (
+      currentCharacter === "," &&
+      !isContainedInString() &&
+      !isContainedInArray() &&
+      !isContainedInObject()
+    ) {
+      writeCharacterBufferToItems();
+    } else {
+      characterBuffer.push(currentCharacter);
+    }
+
+    if (i === arrayAsStringWithOuterBracketsRemoved.length - 1) {
+      writeCharacterBufferToItems();
+    }
+  }
+
+  const evaluatedArrayItems = [];
+
+  for (const arrayItemAsString of arrayItemsAsStrings) {
+    let { value: evaluatedArrayItem, context: newContext } = await evaluate(
+      arrayItemAsString,
+      context,
+    );
+
+    try {
+      evaluatedArrayItem = JSON.parse(evaluatedArrayItem);
+    } catch (error) {
+      // do nothing
+    }
+
+    context = newContext;
+
+    evaluatedArrayItems.push(evaluatedArrayItem);
+  }
+
+  return {
+    value: JSON.stringify(evaluatedArrayItems),
+    context,
+  };
 };
 
 const isObjectLiteral = (value: string): boolean => {
-  const objectLiteralRegularExpression = /^\{.*\}$/;
+  const objectLiteralRegularExpression = /^\{[\s\S]*}$/;
   return objectLiteralRegularExpression.test(value);
 };
 
 const evaluateObjectLiteral = async (
   value: string,
   context: Context,
-): Promise<string> => {
-  // TODO i probably need to evaluate this recursively; what if "input" is a value e.g. "{ foo: input }"?
-  return value;
+): Promise<Evaluation> => {
+  const objectAsString = value;
+
+  const objectAsStringWithOuterBracesRemoved = objectAsString.slice(1, -1);
+
+  const keyBuffer: string[] = [];
+  const valueBuffer: string[] = [];
+
+  const objectEntries: { key: string; value: string }[] = [];
+
+  let parsingKey = true;
+
+  const stringDelimiterInstanceIndices: number[] = [];
+  const arrayDelimiterInstanceIndices: number[] = [];
+  const objectDelimiterInstanceIndices: number[] = [];
+
+  const isContainedInString = () => {
+    return stringDelimiterInstanceIndices.length % 2 === 1;
+  };
+
+  const isContainedInArray = () => {
+    return arrayDelimiterInstanceIndices.length > 0;
+  };
+
+  const isContainedInObject = () => {
+    return objectDelimiterInstanceIndices.length > 0;
+  };
+
+  for (let i = 0; i < objectAsStringWithOuterBracesRemoved.length; i++) {
+    const currentCharacter = objectAsStringWithOuterBracesRemoved[i];
+
+    if (currentCharacter === '"') {
+      stringDelimiterInstanceIndices.push(i);
+    }
+
+    if (currentCharacter === "[") {
+      arrayDelimiterInstanceIndices.push(i);
+    }
+
+    if (currentCharacter === "]") {
+      arrayDelimiterInstanceIndices.pop();
+    }
+
+    if (currentCharacter === "{") {
+      objectDelimiterInstanceIndices.push(i);
+    }
+
+    if (currentCharacter === "}") {
+      objectDelimiterInstanceIndices.pop();
+    }
+
+    if (
+      currentCharacter === ":" &&
+      !isContainedInString() &&
+      !isContainedInArray() &&
+      !isContainedInObject() &&
+      parsingKey
+    ) {
+      parsingKey = false;
+      continue;
+    }
+
+    if (
+      currentCharacter === "," &&
+      !isContainedInString() &&
+      !isContainedInArray() &&
+      !isContainedInObject() &&
+      !parsingKey
+    ) {
+      const key = keyBuffer.join("").trim();
+      const value = valueBuffer.join("").trim();
+      objectEntries.push({ key, value });
+      keyBuffer.length = 0;
+      valueBuffer.length = 0;
+      parsingKey = true;
+      continue;
+    }
+
+    if (parsingKey) {
+      keyBuffer.push(currentCharacter);
+    } else {
+      valueBuffer.push(currentCharacter);
+    }
+
+    if (i === objectAsStringWithOuterBracesRemoved.length - 1) {
+      const key = keyBuffer.join("").trim();
+      const value = valueBuffer.join("").trim();
+
+      if (key.length > 0 && value.length > 0) {
+        objectEntries.push({ key, value });
+      }
+    }
+  }
+
+  const evaluatedObject: { [key: string]: any } = {};
+
+  for (const entry of objectEntries) {
+    let keyString = entry.key;
+    let valueString = entry.value;
+
+    if (isStringLiteral(keyString)) {
+      keyString = evaluateStringLiteral(keyString);
+    }
+
+    let { value: evaluatedValue, context: newContext } = await evaluate(
+      valueString,
+      context,
+    );
+
+    try {
+      evaluatedValue = JSON.parse(evaluatedValue);
+    } catch (error) {
+      // do nothing
+    }
+
+    context = newContext;
+
+    evaluatedObject[keyString] = evaluatedValue;
+  }
+
+  return {
+    value: JSON.stringify(evaluatedObject),
+    context,
+  };
 };
 
 const isInputKeyword = (value: string): boolean => {
@@ -118,7 +355,7 @@ const isObjectPropertyAccess = (value: string): boolean => {
 const evaluateObjectPropertyAccess = async (
   value: string,
   context: Context,
-): Promise<string> => {
+): Promise<Evaluation> => {
   try {
     const pathSegments = value.split(".");
 
@@ -126,7 +363,7 @@ const evaluateObjectPropertyAccess = async (
 
     const propertyPathSegments = pathSegments.slice(1);
 
-    const objectValue = await evaluate(objectSegment, context);
+    const { value: objectValue } = await evaluate(objectSegment, context);
 
     let propertyValue = JSON.parse(objectValue);
 
@@ -136,7 +373,10 @@ const evaluateObjectPropertyAccess = async (
 
     return await evaluate(JSON.stringify(propertyValue), context);
   } catch (error) {
-    return "";
+    return {
+      value: "",
+      context,
+    };
   }
 };
 
@@ -149,7 +389,7 @@ const isArrayIndexAccess = (value: string): boolean => {
 const evaluateArrayIndexAccess = async (
   value: string,
   context: Context,
-): Promise<string> => {
+): Promise<Evaluation> => {
   try {
     const lastClosingBracketIndex = value.lastIndexOf("]");
 
@@ -175,7 +415,10 @@ const evaluateArrayIndexAccess = async (
     }
 
     if (openingBracketIndex === undefined) {
-      return "";
+      return {
+        value: "",
+        context,
+      };
     }
 
     const arraySegment = value.slice(0, openingBracketIndex);
@@ -185,9 +428,9 @@ const evaluateArrayIndexAccess = async (
       lastClosingBracketIndex,
     );
 
-    const arrayValue = await evaluate(arraySegment, context);
+    const { value: arrayValue } = await evaluate(arraySegment, context);
 
-    const indexValue = await evaluate(indexSegment, context);
+    const { value: indexValue } = await evaluate(indexSegment, context);
 
     const array = JSON.parse(arrayValue);
 
@@ -199,7 +442,10 @@ const evaluateArrayIndexAccess = async (
 
     return evaluatedResult;
   } catch (error) {
-    return "";
+    return {
+      value: "",
+      context,
+    };
   }
 };
 
@@ -221,7 +467,7 @@ const evaluateSetToCommand = async (
 
   const [, key, value] = matches;
 
-  const evaluatedValue = await evaluate(value, context);
+  const { value: evaluatedValue } = await evaluate(value, context);
 
   return {
     ...context,
@@ -229,5 +475,21 @@ const evaluateSetToCommand = async (
       ...context.state,
       [key]: evaluatedValue,
     },
+  };
+};
+
+const isGetCommand = (command: string, context: Context): boolean => {
+  const stateKeys = Object.keys(context.state);
+
+  return stateKeys.includes(command);
+};
+
+const evaluateGetCommand = async (
+  command: string,
+  context: Context,
+): Promise<Evaluation> => {
+  return {
+    value: context.state[command],
+    context,
   };
 };
