@@ -4,6 +4,23 @@ export const evaluate = async (
   value: string,
   context: Context,
 ): Promise<Evaluation> => {
+  const indexOfFirstStatementSeparator =
+    getIndexOfFirstStatementSeparator(value);
+
+  const isMultipleStatements = indexOfFirstStatementSeparator !== -1;
+
+  if (isMultipleStatements) {
+    const firstStatement = value.slice(0, indexOfFirstStatementSeparator);
+
+    // TODO might need to check if first statement is an output command; if it is, just evaluate and return without considering subsequent statements since an output command should end the evaluation (like a return statement)
+
+    const restOfValue = value.slice(indexOfFirstStatementSeparator).trim();
+
+    const { context: newContext } = await evaluate(firstStatement, context);
+
+    return await evaluate(restOfValue, newContext);
+  }
+
   if (isOutputCommand(value)) {
     return evaluateOutputCommand(value, context);
   }
@@ -57,6 +74,75 @@ export const evaluate = async (
     return await evaluateGetCommand(value, context);
   }
 
+  return {
+    value: "",
+    context,
+  };
+};
+
+const getIndexOfFirstStatementSeparator = (value: string): number => {
+  const statementSeparatorCharacter = "\n";
+
+  const indicesOfStringDelimiters = [];
+  const indicesOfArrayDelimiters = [];
+  const indicesOfObjectDelimiters = [];
+
+  const isContainedInString = () => {
+    return indicesOfStringDelimiters.length % 2 === 1;
+  };
+
+  const isContainedInArray = () => {
+    return indicesOfArrayDelimiters.length > 0;
+  };
+
+  const isContainedInObject = () => {
+    return indicesOfObjectDelimiters.length > 0;
+  };
+
+  for (let i = 0; i < value.length; i++) {
+    const currentCharacter = value[i];
+
+    if (currentCharacter === '"') {
+      indicesOfStringDelimiters.push(i);
+    }
+
+    if (currentCharacter === "[") {
+      indicesOfArrayDelimiters.push(i);
+    }
+
+    if (currentCharacter === "]") {
+      indicesOfArrayDelimiters.pop();
+    }
+
+    if (currentCharacter === "{") {
+      indicesOfObjectDelimiters.push(i);
+    }
+
+    if (currentCharacter === "}") {
+      indicesOfObjectDelimiters.pop();
+    }
+
+    if (
+      currentCharacter === statementSeparatorCharacter &&
+      !isContainedInString() &&
+      !isContainedInArray() &&
+      !isContainedInObject()
+    ) {
+      return i;
+    }
+  }
+
+  return -1;
+};
+
+const evaluateMultipleStatements = async (
+  value: string,
+  context: Context,
+): Promise<Evaluation> => {
+  // TODO get the index of the first newline character that represents a statement separator (e.g. not in a string, array, or object, or comment)
+  // TODO split the string into two parts: the first statement and the rest of the statements
+  // TODO evaluate the first statement
+  // TODO evaluate the rest of the statements using the context resulting from the first statement evaluation
   return {
     value: "",
     context,

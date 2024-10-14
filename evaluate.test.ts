@@ -155,44 +155,35 @@ describe("evaluate", () => {
       JSON.stringify([0, "hello"]),
       { input: "hello", state: { foo: "0" } },
     ],
-    // TODO setters
-    // [`set foo to "bar"`, ""],
-    // [
-    //   `set foo to "bar"
-    // output foo`,
-    //   "bar",
-    //   { input: "", state: {} },
-    // ],
-    // [
-    //   `set foo to "bar"
-    // output baz`,
-    //   "",
-    // ],
-    // [
-    //   `set baz to ["foo", "bar"]
-    // output baz[0]`,
-    //   "foo",
-    // ],
-    // [
-    //   `set qux to { foo: "bar" }
-    // output qux.foo`,
-    //   "bar",
-    // ],
-    // [
-    //   `set foo to {
-    //   bar: "baz"
-    // }
-    // output foo.bar`,
-    //   "baz",
-    // ],
-    // [
-    //   `set foo to {
-    //   bar: "baz"
-    // }
-    //
-    // output foo.bar`,
-    //   "baz",
-    // ],
+    [`set foo to "bar"`, ""],
+    [
+      `set foo to "bar"
+    output foo`,
+      "bar",
+      { input: "", state: {} },
+    ],
+    [
+      `set foo to "bar"
+    output baz`,
+      "",
+    ],
+    [
+      `set baz to ["foo", "bar"]
+    output baz[0]`,
+      "foo",
+    ],
+    [
+      `set qux to { foo: "bar" }
+    output qux.foo`,
+      "bar",
+    ],
+    [
+      `set foo to {
+      bar: "baz"
+    }
+    output foo.bar`,
+      "baz",
+    ],
   ];
 
   // TODO also log out the context since that's very relevant to the test
