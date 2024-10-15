@@ -149,6 +149,11 @@ describe("evaluate", () => {
     ],
     [`output foo`, "", { input: "", state: {} }],
     [`output foo`, "bar", { input: "", state: { foo: "bar" } }],
+    [
+      `output foo[0]`,
+      "bar",
+      { input: "", state: { foo: JSON.stringify(["bar"]) } },
+    ],
     [`output foo`, "baz", { input: "", state: { foo: "baz" } }],
     [
       `output [foo, input]`,

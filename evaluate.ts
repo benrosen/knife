@@ -468,7 +468,8 @@ const evaluateObjectPropertyAccess = async (
 
 const isArrayIndexAccess = (value: string): boolean => {
   // TODO this is probably wrong; i think it will count [[0]] as an array index access even though it's not (it's an array literal)
-  const arrayIndexAccessRegularExpression = /^.+\[.*\]$/;
+  const arrayIndexAccessRegularExpression = /^[^\s\[{]\S*?(\[.*?])+$/s;
+
   return arrayIndexAccessRegularExpression.test(value);
 };
 
