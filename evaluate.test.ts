@@ -76,67 +76,83 @@ describe("evaluate", () => {
       { input: "", state: {} },
     ],
     [
-      `output [
-      "foo",
-      "bar",
-      "baz"
-    ]`,
+      `
+output [
+  "foo",
+  "bar",
+  "baz"
+]
+`,
       JSON.stringify(["foo", "bar", "baz"]),
       { input: "", state: {} },
     ],
     [
-      `output [
-      0,
-      1,
-      2
-    ]`,
+      `
+output [
+  0,
+  1,
+  2
+]
+`,
       JSON.stringify([0, 1, 2]),
       { input: "", state: {} },
     ],
     [
-      `output [
-      0,
-      input
-    ]`,
+      `
+output [
+  0,
+  input
+]
+`,
       JSON.stringify([0, "hello"]),
       { input: "hello", state: {} },
     ],
     [
-      `output {
-      "foo": "bar"
-    }`,
+      `
+output {
+  "foo": "bar"
+}
+`,
       JSON.stringify({ foo: "bar" }),
       { input: "", state: {} },
     ],
     [
-      `output {
-      "foo": "bar",
-      "baz": "qux"
-    }`,
+      `
+output {
+  "foo": "bar",
+  "baz": "qux"
+}
+`,
       JSON.stringify({ foo: "bar", baz: "qux" }),
       { input: "", state: {} },
     ],
     [
-      `output {
-      "foo": 1,
-      "bar": [1, 2, 3],
-    }`,
+      `
+output {
+  "foo": 1,
+  "bar": [1, 2, 3],
+}
+`,
       JSON.stringify({ foo: 1, bar: [1, 2, 3] }),
       { input: "", state: {} },
     ],
     [
-      `output {
-      "foo": input,
-      "bar": [1, 2, 3],
-    }`,
+      `
+output {
+  "foo": input,
+  "bar": [1, 2, 3],
+}
+`,
       JSON.stringify({ foo: 1, bar: [1, 2, 3] }),
       { input: JSON.stringify(1), state: {} },
     ],
     [
-      `output {
-      "foo": input.foo,
-      "bar": [1, 2, 3],
-    }`,
+      `
+output {
+  "foo": input.foo,
+  "bar": [1, 2, 3],
+}
+`,
       JSON.stringify({ foo: { baz: "qux" }, bar: [1, 2, 3] }),
       {
         input: JSON.stringify({
@@ -162,32 +178,80 @@ describe("evaluate", () => {
     ],
     [`set foo to "bar"`, ""],
     [
-      `set foo to "bar"
-    output foo`,
+      `
+set foo to "bar"
+output foo
+`,
       "bar",
       { input: "", state: {} },
     ],
     [
-      `set foo to "bar"
-    output baz`,
+      `
+set foo to "bar"
+          
+output foo
+`,
+      "bar",
+      { input: "", state: {} },
+    ],
+    [
+      `
+set foo to "bar"
+output baz
+`,
       "",
     ],
     [
-      `set baz to ["foo", "bar"]
-    output baz[0]`,
+      `
+set baz to ["foo", "bar"]
+output baz[0]
+`,
       "foo",
     ],
     [
-      `set qux to { foo: "bar" }
-    output qux.foo`,
+      `
+set qux to { foo: "bar" }
+output qux.foo
+`,
       "bar",
     ],
     [
-      `set foo to {
-      bar: "baz"
-    }
-    output foo.bar`,
+      `
+set foo to {
+  bar: "baz"
+}
+
+output foo.bar
+`,
       "baz",
+    ],
+    [
+      `
+watch foo as foo_watcher
+  output foo
+`,
+      "",
+      { input: "", state: {} },
+    ],
+    [
+      `
+watch foo as foo_watcher
+  output foo
+
+set foo to "bar"
+`,
+      "bar",
+      { input: "", state: {} },
+    ],
+    [
+      `
+watch foo as foo_watcher
+  output foo
+
+set foo to "baz"
+`,
+      "baz",
+      { input: "", state: {} },
     ],
   ];
 
