@@ -74,6 +74,10 @@ export const evaluate = async (
     return await evaluateGetCommand(value, context);
   }
 
+  if (isWatchCommand(value)) {
+    return await evaluateWatchCommand(value, context);
+  }
+
   return {
     value: "",
     context,
@@ -579,4 +583,16 @@ const evaluateGetCommand = async (
     value: context.state[command],
     context,
   };
+};
+
+const isWatchCommand = (command: string): boolean => {
+  const watchCommandRegex = /^watch\s+\w+\s+as\s+\w+/;
+  return watchCommandRegex.test(command.trim());
+};
+
+const evaluateWatchCommand = async (
+  command: string,
+  context: Context,
+): Promise<Evaluation> => {
+  throw new Error("Not implemented");
 };
